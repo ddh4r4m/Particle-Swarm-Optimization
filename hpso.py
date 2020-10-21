@@ -18,6 +18,7 @@ sensor_nodes = [-1 for i in range(total_sn)] #-1 so that we can compare to see i
 enrgyOfSnodes = [10*total_sn] #10 joules of energy for each sensor node
 transmitter_energy = 0.2
 reciever_energy = 0.2
+e_elec = 0.1 #energy consumption
 efs = 0.1 #amplififcation energy for free space model
 emp = 0.2 #amplification energy for multi path model
 do = 0.123 #threshold transmisson distance (hardcoded) actual=sqrt(efs/emp)
@@ -81,7 +82,7 @@ gBest = gBest_ #initially gBest and gBest' are same
 gWorst = gWorst_
 #temp = t2 #setting the temprature
 temp = 273 #using Kelvin here
-gBestFit_ = fitness[fitness.index(max(fitness))] #contains the fitness vlue
+gBestFit_ = fitness[fitness.index(max(fitness))] #contains the fitness value
 
 while(true):
     for i in range(total_ppltn):
@@ -97,9 +98,9 @@ while(true):
         if f>fitness[i]:
             fitness[i]=f
             population_mtrx[i]=crnt_generation
-            if f>gBestFit:
-                gBestFit = f
-                gBest = crnt_generation
+            if f>gBestFit_:
+                gBestFit_ = f
+                gBest_ = crnt_generation
         else:
             if exp((f-f[i])/T) > random.random():
                 f[i]=f
@@ -110,6 +111,7 @@ while(true):
         DR = max(lambdaa*DR,DR_min)
     gBestFit = gBestFit_
     gBest = gBest_
+    gWorst = gWorst_
     #update the generation worst???
     T = lambdaa1 *T
     #termination criteria needed
@@ -131,7 +133,7 @@ def clustering(sensor_nodes,population_mtrx,i):
         #choose this cluster head for sensor node
         selected_ch = rank.index(max(rank[indxOfsn]))
         sensor_nodes[indxOfsn] = selected_ch
-    return min([LifetimeOfPairs(sensor_node_indx,cluster_head_indx) for sensor_node_indx,cluster_head_indx in zip(len(sensor_nodes),cluster_heads) ])
+    return min([LifetimeOfPairs(sensor_node_indx,selected_ch) for sensor_node_indx,cluster_head_indx in zip(len(sensor_nodes),cluster_heads) ])
 
 def LifetimeOfPairs(sensor_node_indx, cluster_head_indx):
     return(enrgyOfSnodes[sensor_node_indx]/eTotal(l,sensor_node_indx,cluster_head_indx))    
@@ -145,7 +147,18 @@ def eTotal(l,sensor_node_indx,cluster_head_indx):
     #l = no of bits to transfer
     #I have assigned constant values here but we need to change it
     #as the values will be different for different parameters
-    etx = 0.2
-    erx = 0.2
+    d = distanceBtwn(sensor_node_indx,cluster_head_indx)
+    if(d<=do):
+        etx = (l*e_elec) +(l*efs*d*d)
+    else:
+        etx = (l*e_elec) + (l*emp*d*d*d*d)
+    erx = l*e_elec
     return(etx+erx)
+
+def distanceBtwn(sensor_node_indx,cluster_head_indx):
+    x1 = ps[sensor_node_indx,0]
+    y1 = ps[sensor_node_indx,1]
+    x2 = ps[cluster_head_indx,0]
+    y2 = ps[cluster_head_indx,1]
+    return (math.sqrt(((x1-x2)**2)+((y1-y2)**2)))
 
